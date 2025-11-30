@@ -2,7 +2,14 @@
 const targetMap = new WeakMap<any, Map<string | symbol, Set<() => void>>>();
 let currentEffect: (() => void) | null = null;
 
-export function reactive<T extends object>(obj: T): T {
+export type Reactive<T> = {
+  [K in keyof T]: T[K] extends Function ? T[K] :
+                  T[K] extends object ? Reactive<T[K]> : T[K]
+};
+
+export type Ref<T> = Reactive<{value: T}>
+
+export function reactive<T extends object>(obj: T): Reactive<T> {
   return new Proxy(obj, {
     get(target: T, prop: string | symbol) {
       // Tracks dependencies
@@ -25,7 +32,7 @@ export function reactive<T extends object>(obj: T): T {
       const value = target[prop as keyof T];
       if (typeof value === "object" && value !== null) {
         return reactive(value); // Deep reactive
-      }
+      } 
       return value;
     },
 
@@ -41,7 +48,8 @@ export function reactive<T extends object>(obj: T): T {
   });
 }
 
-export function ref<T>(value: T) {
+// Wraps a primative in a reactive object
+export function ref<T>(value: T): Ref<T> {
   const state = reactive({ value });
 
   return {
@@ -53,6 +61,7 @@ export function ref<T>(value: T) {
     },
   };
 }
+
 
 export function effect(fn: () => void): void {
   currentEffect = fn;
