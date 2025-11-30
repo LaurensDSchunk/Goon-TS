@@ -5,7 +5,7 @@ type ElementProps<Tag extends keyof HTMLElementTagNameMap> = Partial<
   Omit<HTMLElementTagNameMap[Tag], "style">
 > &
   Record<string, MaybeRef<any>>;
-type Child = Element | string | (() => any) | Ref<any>;
+export type Child = Element | string | (() => any) | Ref<any>;
 type MaybeRef<T> = T | Ref<T> | Reactive<T>;
 
 // Turns a ref into its primitive and does nothing to reactive or primitives
@@ -79,29 +79,40 @@ export class Element<Tag extends keyof HTMLElementTagNameMap = any> {
     }
 
     for (const child of this.m_children) {
-      if (!(child instanceof Element)) {
-        const span = document.createElement("span");
-        effect(() => {
-          const value = typeof child === "function" ? child() : unwrap(child)
-          span.innerText = unwrap(value);
-        });
-        element.appendChild(span);
+      if (child instanceof Element) {
+        const childElement = child.render();
+        element.appendChild(childElement);
         continue;
       }
-      const childElement = child.render();
-      element.appendChild(childElement);
+
+      // If child is a Ref<Element>
+      if (
+        child &&
+        typeof child === "object" &&
+        "value" in child &&
+        child.value instanceof Element
+      ) {
+        let placeholder = document.createElement("span"); // temporary container
+        element.appendChild(placeholder);
+
+        effect(() => {
+          const newElement = child.value.render();
+          placeholder.replaceWith(newElement);
+          placeholder = newElement;
+        });
+        continue;
+      }
+
+      // Handle string, ref, and function children
+      const span = document.createElement("span");
+      effect(() => {
+        const value = typeof child === "function" ? child() : unwrap(child);
+        span.innerText = unwrap(value);
+      });
+      element.appendChild(span);
+      continue;
     }
 
     return element;
   }
 }
-
-type HtmlBuilder = {
-  [K in keyof HTMLElementTagNameMap]: () => Element<K>;
-};
-
-export default new Proxy({} as HtmlBuilder, {
-  get(_, tag: string) {
-    return () => new Element(tag as keyof HTMLElementTagNameMap);
-  },
-});
