@@ -1,0 +1,17 @@
+{
+  "name": "goon-ts",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+
+  "scripts": {
+    "dev": "bun --hot src/index.ts"
+  },
+
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
