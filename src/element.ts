@@ -18,8 +18,7 @@ function unwrap<T>(val: MaybeRef<T>) {
 
 export class Element<Tag extends keyof HTMLElementTagNameMap = any> {
   private m_tag: Tag;
-  private m_props: ElementProps<Tag> = {};
-  private m_style: StyleProps = {};
+  private m_props: ElementProps<Tag> & {style?: StyleProps} = {};
   private m_children: Child[] = [];
 
   public constructor(tag: Tag) {
@@ -32,7 +31,7 @@ export class Element<Tag extends keyof HTMLElementTagNameMap = any> {
   }
 
   public style(style: StyleProps) {
-    this.m_style = style;
+    this.m_props.style = style;
     return this;
   }
 
@@ -50,9 +49,9 @@ export class Element<Tag extends keyof HTMLElementTagNameMap = any> {
     const element = document.createElement(this.m_tag);
 
     // Apply styles
-    for (const key in this.m_style) {
+    for (const key in this.m_props.style ?? {}) {
       effect(() => {
-        const value = this.m_style[key]!;
+        const value = this.m_props.style![key]!;
         element.style[key] = unwrap(value);
       });
     }
@@ -78,6 +77,7 @@ export class Element<Tag extends keyof HTMLElementTagNameMap = any> {
       });
     }
 
+    // Children
     for (const child of this.m_children) {
       if (child instanceof Element) {
         const childElement = child.render();
