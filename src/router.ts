@@ -4,7 +4,7 @@ import { effect, ref, type Ref } from "./reactive";
 
 type RouteMap = Record<string, Element> & { notFound?: Element };
 
-const currentRoute: Ref<string> = ref(window.location.pathname);
+const currentRoute = ref<string>(window.location.pathname);
 const currentRouteElement = ref<Element>(null!);
 
 window.addEventListener("popstate", () => {
