@@ -6,7 +6,7 @@ export type Ref<T> = Reactive<{ value: T }>;
 const effectMap = new WeakMap<any, Map<string | symbol, Set<() => void>>>();
 let currentEffect: (() => void) | null = null;
 
-function reactive<T extends object>(value: T): Reactive<T> {
+export function reactive<T extends object>(value: T): Reactive<T> {
   return new Proxy(value, {
     get(target, prop, receiver) {
       // Track effect dependencies

@@ -1,10 +1,11 @@
+import { window } from "./dom"
 import { type Element } from "./element";
 import { g } from "./g";
 import { effect, ref, type Ref } from "./reactive";
 
 type RouteMap = Record<string, Element> & { notFound?: Element };
 
-const currentRoute = ref<string>(window.location.pathname);
+const currentRoute: Ref<string> = ref(window.location.pathname);
 const currentRouteElement = ref<Element>(null!);
 
 window.addEventListener("popstate", () => {
@@ -33,7 +34,8 @@ export function RouterLink(to: string) {
       href: to,
       onclick: (e: Event) => {
         e.preventDefault(); 
-        history.pushState({}, "", to);
+        if (currentRoute.value !== to)
+          history.pushState({}, "", to);
         currentRoute.value = to; 
       },
     })

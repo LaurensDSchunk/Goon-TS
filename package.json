@@ -14,5 +14,8 @@
   },
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "happy-dom": "^20.0.11"
   }
 }

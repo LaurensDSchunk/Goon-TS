@@ -1,52 +1,54 @@
+import { document, window } from "./dom";
 import { effect, type Reactive, type Ref } from "./reactive";
 
-type StyleProps = Partial<Record<keyof CSSStyleDeclaration, MaybeRef<string>>>;
-type ElementProps<Tag extends keyof HTMLElementTagNameMap> = Partial<
-  Omit<HTMLElementTagNameMap[Tag], "style">
-> &
-  Record<string, MaybeRef<any>>;
-export type Child = Element | string | (() => any) | Ref<any>;
+type Child =
+  | any
+  | Ref<any>
+  | (() => any | Ref<any>); // Computed values
 type MaybeRef<T> = T | Ref<T> | Reactive<T>;
+type Props<Tag extends keyof HTMLElementTagNameMap> = Partial<Record<keyof Omit<HTMLElementTagNameMap[Tag], "style">, MaybeRef<any>>> & Record<string, any>;
+type Style = Partial<Record<keyof CSSStyleDeclaration, MaybeRef<any>>>;
 
-// Turns a ref into its primitive and does nothing to reactive or primitives
-function unwrap<T>(val: MaybeRef<T>) {
+
+// Runs functions and unwraps refs
+function unwrap<T>(val: any) {
+  if (typeof val === "function") {
+    val = val();
+  }
   if (val && typeof val === "object" && "value" in val) {
-    return (val as Ref<T>).value;
+    return val.value
   }
   return val as T;
 }
 
 export class Element<Tag extends keyof HTMLElementTagNameMap = any> {
   private m_tag: Tag;
-  private m_props: ElementProps<Tag> = {};
-  private m_style: StyleProps = {};
-  private m_children: Child[] = [];
+  private m_props: Props<Tag> = {};
+  private m_style: Style = {};
+  private m_children: Child[] | Child = [];
 
   public constructor(tag: Tag) {
     this.m_tag = tag;
   }
-
-  public props(props: ElementProps<Tag>) {
+  public props(props: Props<Tag>) {
     this.m_props = props;
     return this;
   }
-
-  public style(style: StyleProps) {
+  public style(style: Style) {
     this.m_style = style;
     return this;
   }
-
-  public children(children: Child[]) {
+  public children(children: Child[] | Child) {
     this.m_children = children;
     return this;
   }
 
-  public mount(elementId: string) {
-    const mountElement = document.getElementById(elementId);
-    mountElement?.appendChild(this.render());
+  public mount(querySelector: string) {
+    const mountElement = document.querySelector(querySelector)!
+    mountElement.appendChild(this.render());
   }
 
-  private render(): HTMLElement {
+  public render(): HTMLElement {
     const element = document.createElement(this.m_tag);
 
     // Apply styles
@@ -78,39 +80,30 @@ export class Element<Tag extends keyof HTMLElementTagNameMap = any> {
       });
     }
 
-    for (const child of this.m_children) {
+    // Children
+    for (let i = 0; i < this.m_children.length; i++) {
+      const child = this.m_children[i];
+      // Recursivley render Elements
       if (child instanceof Element) {
-        const childElement = child.render();
-        element.appendChild(childElement);
+        element.appendChild(child.render());
         continue;
       }
 
-      // If child is a Ref<Element>
-      if (
-        child &&
-        typeof child === "object" &&
-        "value" in child &&
-        child.value instanceof Element
-      ) {
-        let placeholder = document.createElement("span"); // temporary container
-        element.appendChild(placeholder);
-
-        effect(() => {
-          const newElement = child.value.render();
-          placeholder.replaceWith(newElement);
-          placeholder = newElement;
-        });
-        continue;
-      }
-
-      // Handle string, ref, and function children
-      const span = document.createElement("span");
-      effect(() => {
-        const value = typeof child === "function" ? child() : unwrap(child);
-        span.innerText = unwrap(value);
-      });
+      let span = document.createElement("span")
       element.appendChild(span);
-      continue;
+      effect(() => {
+        const val = unwrap(child);
+
+        // Handles elements from functions or refs
+        if (val instanceof Element) {
+          const newElement = val.render()
+          span.replaceWith(newElement)
+          span = newElement
+          return;
+        }
+
+        span.innerText = String(val)
+      })
     }
 
     return element;
