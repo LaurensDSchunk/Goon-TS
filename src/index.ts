@@ -1,28 +1,26 @@
-export * from "./element";
-export * from "./reactive";
-export * from "./g";
-
-import { document, window } from "./dom";
 import { g } from "./g";
-import { ref } from "./reactive";
+import { computed, ref } from "./reactive";
 
-const r = ref(34);
+// Register happy-dom if not in the browser
+await new Promise<void>(async (resolve) => {
+  try {
+    window;
+    document;
+  } catch {
+    const happy = await import("@happy-dom/global-registrator");
+    happy.GlobalRegistrator.register();
+  }
+  document.body.innerHTML = `<div id="app"></div>`
+  resolve();
+});
 
-const app = g
-  .h1()
-  .props({ id: "idexample", className: "coll blud" })
-  .style({ color: "red" })
-  .children([
-    g.button().children([r]),
-    g
-      .div()
-      .children(
-        Array.from({ length: 3 }, () =>
-          g.input().props({ type: "checkbox", checked: true })
-        )
-      ),
-  ]);
+export * from "./reactive";
+export * from "./g"
 
-document.body.innerHTML = `<div id="app"></div>`
+const len = ref(5);
+const children = computed(() => {
+  return Array.from({ length: len.value }, () => g.h1().children(["goon"]));
+});
+const app = g.div().children(children);
+
 app.mount("#app")
-console.log(document.body.innerHTML)
