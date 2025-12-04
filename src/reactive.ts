@@ -93,6 +93,10 @@ export function ref<T>(value: T): Ref<T> {
   return reactive({ value });
 }
 
+/**
+ * Runs the function once immediatley and then again each time a dependency changes.
+ * Dependencies are only detected in the first, initial run.
+ */
 export function effect(fn: () => void) {
   currentEffects.push(fn);
   fn();
