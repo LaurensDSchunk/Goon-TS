@@ -146,7 +146,7 @@ export function computed<T>(fn: () => T): Ref<T> {
 
       return value;
     },
-    set value(newValue) {
+    set value(_) {
       throw new Error(
         "You cannot set the value of a computed value. It is readonly."
       );

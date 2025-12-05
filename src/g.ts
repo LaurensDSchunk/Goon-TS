@@ -1,10 +1,14 @@
 import { GoonElement } from "./element";
+import { RouterLink, RouterView } from "./router";
 
 type HtmlBuilder = {
   [K in keyof HTMLElementTagNameMap]: () => GoonElement<K>;
 };
 
-const components = {}; // Custom components are put here
+const components = {
+  RouterLink,
+  RouterView
+}; // Custom components are put here
 
 type CustomComponents = {
   [K in keyof typeof components]: (typeof components)[K];

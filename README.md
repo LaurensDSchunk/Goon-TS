@@ -1,6 +1,6 @@
 # Goon TS - The sigma's frontend framework
 
-# Reactivity API
+## Reactivity API
 
 - `reactive()`:
   Creates a reactive proxy around an object that runs dependent functions when
@@ -59,7 +59,7 @@
   a.value = "Goon" <-- will trigger the effect.
   ```
 
-# The `g` object
+## The `g` object
 
 The `g` object holds all of the built-in components that can be created.
 It includes every HTML element as well as some library-specific ones. The 
