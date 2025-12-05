@@ -41,16 +41,41 @@ function trackFunctionDeps(
   deps.add(current[current.length - 1]!);
 }
 
+function track(target: Object, prop: string | symbol) {
+  // Find dependencies of effects
+  trackFunctionDeps(effectDeps, currentEffects, target, prop);
+
+  // Find dependencies of computed functions
+  trackFunctionDeps(computedDeps, currentComputed, target, prop);
+}
+
+function trigger(target: Object, prop: string | symbol) {
+  // Tracks the effects that have already been run to not run them twice
+  const runEffects = new Set<() => any>();
+
+  const comps = computedDeps.get(target)?.get(prop);
+  comps?.forEach((v) => {
+    invalidComputed.add(v);
+
+    // If an effect has a computed dependency, run the effect
+    const effs = computedEffectDeps.get(v);
+    effs?.forEach((fn) => {
+      fn();
+      runEffects.add(fn);
+    });
+  });
+
+  // Get and run all dependent effects
+  const effects = effectDeps.get(target)?.get(prop)?.difference(runEffects);
+  effects?.forEach((fn) => fn());
+}
+
 export function reactive<T extends object>(value: T): Reactive<T> {
   if (proxyCache.has(value)) return proxyCache.get(value);
 
   const proxy = new Proxy(value, {
     get(target, prop, receiver) {
-      // Find dependencies of effects
-      trackFunctionDeps(effectDeps, currentEffects, target, prop);
-
-      // Find dependencies of computed functions
-      trackFunctionDeps(computedDeps, currentComputed, target, prop);
+      track(target, prop);
 
       const value = Reflect.get(target, prop, receiver);
       if (typeof value === "object" && value !== null) {
@@ -61,25 +86,7 @@ export function reactive<T extends object>(value: T): Reactive<T> {
 
     set(target, prop, newValue, receiver) {
       Reflect.set(target, prop, newValue, receiver);
-
-      // Tracks the effects that have already been run to not run them twice
-      const runEffects = new Set<() => any>();
-
-      const comps = computedDeps.get(target)?.get(prop);
-      comps?.forEach((v) => {
-        invalidComputed.add(v);
-        
-        // If an effect has a computed dependency, run the effect
-        const effs = computedEffectDeps.get(v)
-        effs?.forEach((fn) => {
-          fn()
-          runEffects.add(fn);
-        });
-      });
-
-      // Get and run all dependent effects
-      const effects = effectDeps.get(target)?.get(prop)?.difference(runEffects);
-      effects?.forEach((fn) => fn());
+      trigger(target, prop)
 
       return true;
     },
@@ -90,7 +97,18 @@ export function reactive<T extends object>(value: T): Reactive<T> {
 }
 
 export function ref<T>(value: T): Ref<T> {
-  return reactive({ value });
+  let state = value;
+
+  return {
+    get value() {
+      track(this, "value");
+      return state;
+    },
+    set value(newValue) {
+      state = newValue;
+      trigger(this, "value");
+    }
+  };
 }
 
 /**

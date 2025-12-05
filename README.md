@@ -90,22 +90,24 @@ attributes of each element can be configured as follows:
   color.value = "red" <-- h1 turns red
   ```
 - `.children()`: 
-  Accepts an array or a reactive value containing an array. The array can hold
-  any data type, but all child values (excluding another `GoonElement`) are 
-  converted to a string before being placed in the DOM. Reactive values will be 
-  reflected in the DOM and `GoonElement` children will be rendered recursivley.
+  Accepts an array, a reactive value containing an array, or a function 
+  returning an array. The array can hold any data type, but all child values 
+  (excluding another `GoonElement`) are converted to a string before being 
+  placed in the DOM. Reactive values will be reflected in the DOM and 
+  `GoonElement` children will be rendered recursivley.
   ```
   const count = ref(5)
   const computedChildren = computed(() => {
     return Array.from({length: count.value}, () => g.h1().children(["67"]))
   })
   g.div().children(computedChildren); <-- Changing count.value will update DOM
+
   ---
   const name = reactive({first: "Einstein"})
   g.div().children(["hello", 67, name.first])
   ```
 
-## Mounting a `g`
+## Mounting a `GoonElement`
 Calling `.mount()` will attach a g-tree to the element matching the input 
 query selector. The tree will then attempt to render. There are 2 paths:
 - If the contents of the mounting target are empty, Goon TS will create all
