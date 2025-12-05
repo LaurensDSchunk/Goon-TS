@@ -1,16 +1,17 @@
+import type { GoonElement } from "./element";
 import { g } from "./g";
 import { effect, ref, type Ref } from "./reactive";
 
-export type RouteMap = Record<string, Element> & { notFound?: Element };
+export type RouteMap = Record<string, GoonElement> & { notFound?: GoonElement };
 
 const currentRoute: Ref<string> = ref(window.location.pathname);
-const currentRouteElement = ref<Element>(null!);
+const currentRouteElement = ref<GoonElement>(null!);
 
 window.addEventListener("popstate", () => {
   currentRoute.value = window.location.pathname;
 });
 
-export function RouterView(map: RouteMap): Ref<Element> {
+export function RouterView(map: RouteMap): Ref<GoonElement> {
   effect(() => {
     let routeElement = map[currentRoute.value];
 

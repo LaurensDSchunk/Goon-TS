@@ -4,7 +4,7 @@
   "repository": {
     "url": "https://www.github.com/laurensdschunk/goon-ts"
   },
-  "version": "1.1.0",
+  "version": "1.1.1",
 
   "module": "src/index.ts",
   "devDependencies": {
