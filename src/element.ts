@@ -88,12 +88,10 @@ export class GoonElement<Tag extends Tags = any> {
     if (!element) {
       if (hydrating) console.warn("Hydration mismatch detected")
       element = document.createElement(this.m_tag);
-      console.log("creating element");
       parent.appendChild(element);
     }
     if (element.tagName.toLowerCase() !== this.m_tag) {
       if (hydrating) console.warn("Hydration mismatch detected")
-      console.log("replacing element");
       const newElement = document.createElement(this.m_tag);
       element.replaceWith(newElement);
       element = newElement;

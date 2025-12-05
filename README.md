@@ -6,10 +6,11 @@
   Creates a reactive proxy around an object that runs dependent functions when
   the value is changed.
 - `ref()`:
-  Creates a reactive proxy around an object that wraps the input value. To 
-  access the value, one must access it's `.value` attribute. Ref is nessesarry 
-  to make a primitive reactive. Ref can also be used to track when the entire 
+  Creates a reactive proxy around an object that wraps the input value. To
+  access the value, one must access it's `.value` attribute. Ref is nessesarry
+  to make a primitive reactive. Ref can also be used to track when the entire
   object is replaced.
+
   ```
   const a = reactive([1,2,3])
   // No way to replace the array object as a whole
@@ -20,9 +21,9 @@
   ```
 
 - `effect()`:
-  The function passed in is run once immediately and tracks all dependencies 
-  accessed. If any dependencies are modified, the function will be re-run. 
-  Note that only dependencies found in the first execution are tracked. If a 
+  The function passed in is run once immediately and tracks all dependencies
+  accessed. If any dependencies are modified, the function will be re-run.
+  Note that only dependencies found in the first execution are tracked. If a
   dependency is run in a branch, consider accessing it's value at the start of
   the function:
   ```
@@ -39,7 +40,7 @@
   Creates a reactive value that can use other reactive values as dependencies.
   By default, the value is lazily evaluated, meaning it is only calculated
   when `.value` is accessed. If a computed value is a dependency to an effect,
-  any change to the computed value's dependencies will re-run the effect. A 
+  any change to the computed value's dependencies will re-run the effect. A
   computed value can be used exactly like a ref, with the exception that it is
   readonly.
 
@@ -61,15 +62,18 @@
 
 ## The `g` object
 
+> Note that Goon TS uses the globally registered `window` and `document` values.
+
 The `g` object holds all of the built-in components that can be created.
-It includes every HTML element as well as some library-specific ones. The 
+It includes every HTML element as well as some library-specific ones. The
 attributes of each element can be configured as follows:
 
 - `.props()`:
-  An object (including a reactive object) can configure the properties of 
-  the element using the same naming as classic JS DOM manipulation (eg. 
+  An object (including a reactive object) can configure the properties of
+  the element using the same naming as classic JS DOM manipulation (eg.
   `className`, `id`). Values can be reactive, and changes to their values
-  will be reflected in the DOM. 
+  will be reflected in the DOM.
+
   ```
   const reactiveProps = reactive({id: "sigma", className: "tuff"})
   g.h1().props(reactiveProps);
@@ -83,18 +87,19 @@ attributes of each element can be configured as follows:
   ```
 
 - `.style()`:
-  Same as props but with CSS style attributes. 
+  Same as props but with CSS style attributes.
   ```
   const color = ref("blue")
   g.h1().style({color})
   color.value = "red" <-- h1 turns red
   ```
-- `.children()`: 
-  Accepts an array, a reactive value containing an array, or a function 
-  returning an array. The array can hold any data type, but all child values 
-  (excluding another `GoonElement`) are converted to a string before being 
-  placed in the DOM. Reactive values will be reflected in the DOM and 
+- `.children()`:
+  Accepts an array, a reactive value containing an array, or a function
+  returning an array. The array can hold any data type, but all child values
+  (excluding another `GoonElement`) are converted to a string before being
+  placed in the DOM. Reactive values will be reflected in the DOM and
   `GoonElement` children will be rendered recursivley.
+
   ```
   const count = ref(5)
   const computedChildren = computed(() => {
@@ -108,14 +113,39 @@ attributes of each element can be configured as follows:
   ```
 
 ## Mounting a `GoonElement`
-Calling `.mount()` will attach a g-tree to the element matching the input 
+
+Calling `.mount()` will attach a g-tree to the element matching the input
 query selector. The tree will then attempt to render. There are 2 paths:
+
 - If the contents of the mounting target are empty, Goon TS will create all
   elements and connect reactive values and their elements.
 - If the mounting target contains anything, Goon TS will attempt to hydrate,
   connecting reactive values with their elements. If the existing tree does
   not match the g-tree, the contents of the DOM will be overriden and a warning
-  will be printed to the console. 
+  will be printed to the console.
 
+## Router API
 
-Note that Goon TS uses the globally registered `window` and `document` values. 
+The router manipulates the UI state based on `window.location.pathname`. There
+are currently two router components and a router helper function (`useRouter()`).
+
+### Router Components
+
+- `g.RouterView()`:
+  A component that takes the form of the element corresponding to the current
+  pathname. The parameter is of type `RouteMap`, which maps a path to an 
+  element. An extra, optional `notFound` key matches all paths that are not
+  otherwise defined. The RouterView updates automatically on pathname change.
+
+- `g.RouterLink()`:
+  An extension to the vanilla HTML `a` element which navigates without 
+  reloading the page. 
+
+### The `useRouter()` helper
+
+This function returns an object containing two utility functions:
+- `push()`:
+  Navigates to a different path without reloading the page, pushing the
+  previous location to the browser's history.
+- `replace()`: 
+  Similar to `push()` but does not push the location to the browser's history.
