@@ -1,30 +1,81 @@
-export type Reactive<T> = {
-  [K in keyof T]: T[K] extends object ? Reactive<T[K]> : T[K];
-};
+const proxyCache = new WeakMap<object, any>();
+
+const effectDeps = new WeakMap<Object, Map<string | symbol, Set<() => void>>>();
+const currentEffects: (() => void)[] = [];
+
+// Object -> prop -> dependent function
+const computedDeps = new WeakMap<
+  object,
+  Map<symbol | string, Set<() => any>>
+>();
+// If a computed is in here, it will re-compute its value when accessed
+const invalidComputed = new Set<() => any>();
+const currentComputed: (() => any)[] = [];
+
+const computedEffectDeps = new Map<() => any, Set<() => void>>();
+
+export type Reactive<T extends object> = T;
 export type Ref<T> = Reactive<{ value: T }>;
 
-const effectMap = new WeakMap<any, Map<string | symbol, Set<() => void>>>();
-let currentEffect: (() => void) | null = null;
+function trackFunctionDeps(
+  depMap: WeakMap<Object, Map<string | symbol, Set<() => any>>>,
+  current: (() => any)[],
+  target: object,
+  prop: string | symbol
+) {
+  if (current.length === 0) return;
+
+  let propsMap = depMap.get(target);
+  if (!propsMap) {
+    propsMap = new Map();
+    depMap.set(target, propsMap);
+  }
+
+  let deps = propsMap.get(prop);
+  if (!deps) {
+    deps = new Set();
+    propsMap.set(prop, deps);
+  }
+
+  // Add dependency to the currently running function
+  deps.add(current[current.length - 1]!);
+}
+
+function track(target: Object, prop: string | symbol) {
+  // Find dependencies of effects
+  trackFunctionDeps(effectDeps, currentEffects, target, prop);
+
+  // Find dependencies of computed functions
+  trackFunctionDeps(computedDeps, currentComputed, target, prop);
+}
+
+function trigger(target: Object, prop: string | symbol) {
+  // Tracks the effects that have already been run to not run them twice
+  const runEffects = new Set<() => any>();
+
+  const comps = computedDeps.get(target)?.get(prop);
+  comps?.forEach((v) => {
+    invalidComputed.add(v);
+
+    // If an effect has a computed dependency, run the effect
+    const effs = computedEffectDeps.get(v);
+    effs?.forEach((fn) => {
+      fn();
+      runEffects.add(fn);
+    });
+  });
+
+  // Get and run all dependent effects
+  const effects = effectDeps.get(target)?.get(prop)?.difference(runEffects);
+  effects?.forEach((fn) => fn());
+}
 
 export function reactive<T extends object>(value: T): Reactive<T> {
-  return new Proxy(value, {
+  if (proxyCache.has(value)) return proxyCache.get(value);
+
+  const proxy = new Proxy(value, {
     get(target, prop, receiver) {
-      // Track effect dependencies
-      if (currentEffect !== null) {
-        let targetMap = effectMap.get(target);
-        if (!targetMap) {
-          targetMap = new Map();
-          effectMap.set(target, targetMap);
-        }
-
-        let propSet = targetMap.get(prop);
-        if (!propSet) {
-          propSet = new Set();
-          targetMap.set(prop, propSet);
-        }
-
-        propSet.add(currentEffect);
-      }
+      track(target, prop);
 
       const value = Reflect.get(target, prop, receiver);
       if (typeof value === "object" && value !== null) {
@@ -32,38 +83,73 @@ export function reactive<T extends object>(value: T): Reactive<T> {
       }
       return value;
     },
-    set(target, prop, value, receiver) {
-      const result = Reflect.set(target, prop, value, receiver);
 
-      const deps = effectMap.get(target)?.get(prop);
-      deps?.forEach((fn) => fn());
+    set(target, prop, newValue, receiver) {
+      Reflect.set(target, prop, newValue, receiver);
+      trigger(target, prop)
 
-      return result;
+      return true;
     },
   });
+
+  proxyCache.set(value, proxy);
+  return proxy;
 }
 
 export function ref<T>(value: T): Ref<T> {
-  // If it's already an object, make it reactive
-  if (typeof value === "object" && value !== null) {
-    const reactiveObj = reactive(value as object);
-    return { value: reactiveObj } as Ref<T>;
-  }
+  let state = value;
 
-  // Otherwise wrap primitive in { value } and make reactive
-  const wrapper = reactive({ value });
   return {
     get value() {
-      return wrapper.value;
+      track(this, "value");
+      return state;
     },
-    set value(v) {
-      wrapper.value = v;
-    },
-  }
+    set value(newValue) {
+      state = newValue;
+      trigger(this, "value");
+    }
+  };
 }
 
+/**
+ * Runs the function once immediatley and then again each time a dependency changes.
+ * Dependencies are only detected in the first, initial run.
+ */
 export function effect(fn: () => void) {
-  currentEffect = fn;
+  currentEffects.push(fn);
   fn();
-  currentEffect = null;
+  currentEffects.pop();
+}
+
+export function computed<T>(fn: () => T): Ref<T> {
+  let value: T = null!;
+  invalidComputed.add(fn);
+
+  return {
+    get value() {
+      if (invalidComputed.has(fn)) {
+        currentComputed.push(fn);
+        value = fn();
+        currentComputed.pop();
+
+        invalidComputed.delete(fn);
+      }
+
+      if (currentEffects.length !== 0) {
+        let deps = computedEffectDeps.get(fn);
+        if (!deps) {
+          deps = new Set();
+          computedEffectDeps.set(fn, deps);
+        }
+        deps.add(currentEffects[currentEffects.length - 1]!);
+      }
+
+      return value;
+    },
+    set value(newValue) {
+      throw new Error(
+        "You cannot set the value of a computed value. It is readonly."
+      );
+    },
+  };
 }

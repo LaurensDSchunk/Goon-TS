@@ -1,11 +1,6 @@
 {
   "name": "goon-ts",
   "module": "src/index.ts",
-  "type": "module",
-  "private": true,
-  "scripts": {
-    "dev": "bun --hot src/index.ts"
-  },
   "devDependencies": {
     "@types/bun": "latest"
   },
@@ -15,7 +10,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "dependencies": {
-    "happy-dom": "^20.0.11"
-  }
+  "private": true,
+  "scripts": {
+    "dev": "bun --hot src/index.ts"
+  },
+  "type": "module"
 }
