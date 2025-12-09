@@ -85,8 +85,15 @@ export function reactive<T extends object>(value: T): Reactive<T> {
     },
 
     set(target, prop, newValue, receiver) {
+      const oldValue = (target as any)[prop];
+
+      // Only trigger when value changed
+      if (Object.is(oldValue, newValue)) {
+        return true;
+      }
+
       Reflect.set(target, prop, newValue, receiver);
-      trigger(target, prop)
+      trigger(target, prop);
 
       return true;
     },
@@ -105,9 +112,10 @@ export function ref<T>(value: T): Ref<T> {
       return state;
     },
     set value(newValue) {
+      if (newValue === state) return;
       state = newValue;
       trigger(this, "value");
-    }
+    },
   };
 }
 
