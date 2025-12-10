@@ -1,4 +1,4 @@
-import type { GoonElement } from "./element";
+import type { GoonElement } from "./GoonElement";
 import { g } from "./g";
 import { effect, ref, type Ref } from "./reactive";
 

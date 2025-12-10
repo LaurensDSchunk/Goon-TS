@@ -1,5 +1,7 @@
 # Goon TS - The sigma's frontend framework
 
+Goon TS acts as your "goon", doing all of the dirty work for you.
+
 ## Reactivity API
 
 - `reactive()`:

@@ -1,4 +1,7 @@
+import type { GoonNode } from "./GoonNode";
 import { effect, type Ref } from "./reactive";
+import { GoonText } from "./GoonText";
+import { unwrap } from "./utils";
 
 type Tags = keyof HTMLElementTagNameMap;
 type Props<Tag extends Tags> = Partial<
@@ -9,28 +12,7 @@ type Style = Partial<Record<keyof CSSStyleDeclaration, any>>;
 
 let hydrating = false;
 
-/**
- * If the value is a function, runs it and unwraps it if it's a ref
- * If the value is a ref, unwraps it (returns value.value)
- *
- * TLDR: Normalizes children to be used in the HTML
- *
- * @param value Anything to potentially be unwrapped
- */
-function unwrap(value: any) {
-  if (typeof value === "function") {
-    value = value();
-  }
-
-  // If it's a ref
-  if (typeof value === "object" && "value" in value) {
-    return value.value;
-  }
-
-  return value;
-}
-
-export class GoonElement<Tag extends Tags = any> {
+export class GoonElement<Tag extends Tags = any> implements GoonNode {
   private m_tag: Tag;
   private m_props: Props<Tag> = {};
   private m_style: Style = {};
@@ -86,30 +68,33 @@ export class GoonElement<Tag extends Tags = any> {
   public render(parent: Element, childNumber: number) {
     let element = parent.children[childNumber] as HTMLElement;
     if (!element) {
-      if (hydrating) console.warn("Hydration mismatch detected")
+      if (hydrating) console.warn("Hydration mismatch detected");
       element = document.createElement(this.m_tag);
       parent.appendChild(element);
     }
     if (element.tagName.toLowerCase() !== this.m_tag) {
-      if (hydrating) console.warn("Hydration mismatch detected")
+      if (hydrating) console.warn("Hydration mismatch detected");
       const newElement = document.createElement(this.m_tag);
       element.replaceWith(newElement);
       element = newElement;
     }
 
+    // Assign the ref
     if (this.m_ref) {
       this.m_ref.value = element;
     }
 
     // Children
     effect(() => {
-      const children = unwrap(this.m_children);
+      let children = unwrap(this.m_children);
+      if (!(children instanceof Array)) children = [children]
 
       for (let i = 0; i < children.length; i++) {
         let child = children[i];
 
         if (!(child instanceof GoonElement)) {
-          child = new GoonElement("span").props({ innerText: child }).style({whiteSpace: "pre"});
+          child = new GoonText(child);
+          (child as GoonText).render(element, i)
         }
 
         // Recursivley render Elements
@@ -120,30 +105,33 @@ export class GoonElement<Tag extends Tags = any> {
       }
     });
 
-    for (const key in this.m_props) {
-      const value = this.m_props[key];
+    effect(() => {
+      for (const key in this.m_props) {
+        const value = this.m_props[key];
 
-      // Functions
-      if (key.startsWith("on") && typeof value === "function") {
-        const event = key.slice(2).toLowerCase();
+        // Functions
+        if (key.startsWith("on") && typeof value === "function") {
+          const event = key.slice(2).toLowerCase();
 
-        const existingListener = this.m_eventListeners.get(event)
-        if (existingListener) element.removeEventListener(event, existingListener)
+          const existingListener = this.m_eventListeners.get(event);
+          if (existingListener)
+            element.removeEventListener(event, existingListener);
 
-        element.addEventListener(event, value);
-        this.m_eventListeners.set(event, value)
-        continue;
-      }
-
-      effect(() => {
-        if (key in element) {
-          // @ts-ignore
-          element[key] = unwrap(value);
-        } else {
-          element.setAttribute(key, unwrap(value));
+          element.addEventListener(event, value);
+          this.m_eventListeners.set(event, value);
+          continue;
         }
-      });
-    }
+
+        effect(() => {
+          if (key in element) {
+            // @ts-ignore
+            element[key] = String(unwrap(value));
+          } else {
+            element.setAttribute(key, String(unwrap(value)));
+          }
+        });
+      }
+    });
 
     for (const key in this.m_style) {
       effect(() => {
