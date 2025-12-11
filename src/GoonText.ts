@@ -1,5 +1,5 @@
 import type { GoonNode } from "./GoonNode";
-import { effect, ref, type Ref } from "./reactive";
+import { effect, type Ref } from "./reactive";
 import { unwrap } from "./utils";
 
 export class GoonText implements GoonNode {

@@ -1,6 +1,6 @@
 import type { GoonElement } from "./GoonElement";
 import { g } from "./g";
-import { effect, ref, type Ref } from "./reactive";
+import { computed, ref, type Ref } from "./reactive";
 
 export type RouteMap = Record<string, GoonElement> & { notFound?: GoonElement };
 
@@ -12,17 +12,15 @@ window.addEventListener("popstate", () => {
 });
 
 export function RouterView(map: RouteMap): Ref<GoonElement> {
-  effect(() => {
+  return computed(() => {
+    console.log(currentRoute.value)
     let routeElement = map[currentRoute.value];
-
     if (routeElement === undefined) {
       if (map.notFound) routeElement = map.notFound;
     }
 
-    currentRouteElement.value = routeElement!;
-  });
-
-  return currentRouteElement;
+    return routeElement!;
+  })
 }
 
 export function RouterLink(to: string) {
