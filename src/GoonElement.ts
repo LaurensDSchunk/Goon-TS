@@ -10,8 +10,6 @@ type Props<Tag extends Tags> = Partial<
   Record<string, any>;
 type Style = Partial<Record<keyof CSSStyleDeclaration, any>>;
 
-let hydrating = false;
-
 export class GoonElement<Tag extends Tags = any> implements GoonNode {
   private m_tag: Tag;
   private m_props: Props<Tag> = {};
@@ -58,26 +56,11 @@ export class GoonElement<Tag extends Tags = any> implements GoonNode {
         "The mount element specified with the query selector does not exist!"
       );
 
-    if (mountElement.children.length !== 0) hydrating = true;
-
-    this.render(mountElement, 0);
-
-    hydrating = false;
+    mountElement.appendChild(this.render());
   }
 
-  public render(parent: Element, childNumber: number) {
-    let element = parent.children[childNumber] as HTMLElement;
-    if (!element) {
-      if (hydrating) console.warn("Hydration mismatch detected");
-      element = document.createElement(this.m_tag);
-      parent.appendChild(element);
-    }
-    if (element.tagName.toLowerCase() !== this.m_tag) {
-      if (hydrating) console.warn("Hydration mismatch detected");
-      const newElement = document.createElement(this.m_tag);
-      element.replaceWith(newElement);
-      element = newElement;
-    }
+  public render(): Node {
+    let element = document.createElement(this.m_tag) as HTMLElement;
 
     // Assign the ref
     if (this.m_ref) {
@@ -88,18 +71,19 @@ export class GoonElement<Tag extends Tags = any> implements GoonNode {
     effect(() => {
       let children = unwrap(this.m_children);
       if (!(children instanceof Array)) children = [children]
+      element.childNodes.forEach(node => element.removeChild(node))
 
       for (let i = 0; i < children.length; i++) {
         let child = children[i];
 
         if (!(child instanceof GoonElement)) {
           child = new GoonText(child);
-          (child as GoonText).render(element, i)
+          element.appendChild((child as GoonText).render())
         }
 
         // Recursivley render Elements
         if (child instanceof GoonElement) {
-          child.render(element, i);
+          element.appendChild(child.render());
           continue;
         }
       }
@@ -139,5 +123,7 @@ export class GoonElement<Tag extends Tags = any> implements GoonNode {
         element.style[key] = unwrap(value);
       });
     }
+
+    return element;
   }
 }

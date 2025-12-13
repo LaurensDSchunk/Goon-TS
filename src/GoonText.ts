@@ -17,7 +17,7 @@ export class GoonText implements GoonNode {
         "The mount element specified with the query selector does not exist!"
       );
 
-    this.render(mountElement, 0);
+    mountElement.appendChild(this.render());
   }
 
   public ref(val: Ref<Text>) {
@@ -25,17 +25,8 @@ export class GoonText implements GoonNode {
     return this;
   }
 
-  public render(parent: Element, childNumber: number) {
-    let node = parent.childNodes[childNumber] as Text;
-    if (node && node.nodeType !== Node.TEXT_NODE) {
-      const newNode = document.createTextNode("");
-      node.replaceWith(newNode);
-      node = newNode;
-    }
-    if (!node) {
-      node = document.createTextNode("");
-      parent.appendChild(node);
-    }
+  public render(): Text {
+    let node = document.createTextNode("");
 
     if (this.m_ref) {
       this.m_ref.value = node;
@@ -44,5 +35,7 @@ export class GoonText implements GoonNode {
     effect(() => {
       node.textContent = String(unwrap(this.m_text));
     });
+
+    return node;
   }
 }

@@ -117,14 +117,8 @@ attributes of each element can be configured as follows:
 ## Mounting a `GoonElement`
 
 Calling `.mount()` will attach a g-tree to the element matching the input
-query selector. The tree will then attempt to render. There are 2 paths:
-
-- If the contents of the mounting target are empty, Goon TS will create all
-  elements and connect reactive values and their elements.
-- If the mounting target contains anything, Goon TS will attempt to hydrate,
-  connecting reactive values with their elements. If the existing tree does
-  not match the g-tree, the contents of the DOM will be overriden and a warning
-  will be printed to the console.
+query selector. The tree will then attempt to render. Goon TS will create all
+elements and connect reactive values and their elements.
 
 ## Router API
 
